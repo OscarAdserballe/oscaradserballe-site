@@ -20,6 +20,8 @@ const eventInput = v.object({
   totalTokens: v.optional(v.number()),
   cost: v.optional(v.number()),
   statusCode: v.optional(v.number()),
+  prompt: v.optional(v.string()),
+  completion: v.optional(v.string()),
 });
 
 export const ingestMany = mutation({

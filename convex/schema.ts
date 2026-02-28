@@ -28,6 +28,8 @@ export default defineSchema({
     totalTokens: v.optional(v.number()),
     cost: v.optional(v.number()),
     statusCode: v.optional(v.number()),
+    prompt: v.optional(v.string()),
+    completion: v.optional(v.string()),
   })
     .index("by_eventId", ["eventId"])
     .index("by_receivedAtMs", ["receivedAtMs"]),

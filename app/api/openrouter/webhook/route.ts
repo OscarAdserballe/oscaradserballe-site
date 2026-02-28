@@ -52,6 +52,8 @@ type EventInput = {
   totalTokens?: number;
   cost?: number;
   statusCode?: number;
+  prompt?: string;
+  completion?: string;
 };
 
 const ingestManyRef = makeFunctionReference<
@@ -137,6 +139,17 @@ function pickNumber(
   return Number.isFinite(value) ? value : undefined;
 }
 
+const MAX_CONTENT_LENGTH = 50_000;
+
+function truncate(value: string | undefined): string | undefined {
+  if (!value || value.length === 0) {
+    return undefined;
+  }
+  return value.length > MAX_CONTENT_LENGTH
+    ? value.slice(0, MAX_CONTENT_LENGTH) + "…[truncated]"
+    : value;
+}
+
 function extractEvents(
   payload: OtlpPayload,
   receivedAtMs: number,
@@ -152,6 +165,18 @@ function extractEvents(
         }
 
         const attrs = buildAttributeMap(resourceAttributes, span.attributes);
+
+        const rawPrompt = pickString(attrs, [
+          "gen_ai.prompt",
+          "span.input",
+          "trace.input",
+        ]);
+        const rawCompletion = pickString(attrs, [
+          "gen_ai.completion",
+          "span.output",
+          "trace.output",
+        ]);
+
         events.push({
           eventId: `${span.traceId}:${span.spanId}`,
           traceId: span.traceId,
@@ -163,28 +188,26 @@ function extractEvents(
           receivedAtMs,
           model: pickString(attrs, [
             "gen_ai.request.model",
-            "llm.request.model",
-            "model",
+            "gen_ai.response.model",
           ]),
           provider: pickString(attrs, [
+            "gen_ai.provider.name",
             "gen_ai.system",
-            "provider",
-            "openrouter.provider",
+            "trace.metadata.openrouter.provider_name",
           ]),
-          source: pickString(attrs, [
-            "openrouter.api_key_name",
-            "openrouter.api_key_id",
-            "service.name",
+          source: pickString(attrs, ["trace.metadata.openrouter.api_key_name"]),
+          userId: pickString(attrs, [
+            "user.id",
+            "trace.metadata.openrouter.user_id",
           ]),
-          userId: pickString(attrs, ["user.id"]),
           sessionId: pickString(attrs, ["session.id"]),
-          promptTokens: pickNumber(attrs, ["gen_ai.usage.prompt_tokens"]),
-          completionTokens: pickNumber(attrs, [
-            "gen_ai.usage.completion_tokens",
-          ]),
+          promptTokens: pickNumber(attrs, ["gen_ai.usage.input_tokens"]),
+          completionTokens: pickNumber(attrs, ["gen_ai.usage.output_tokens"]),
           totalTokens: pickNumber(attrs, ["gen_ai.usage.total_tokens"]),
-          cost: pickNumber(attrs, ["gen_ai.usage.cost", "usage.cost"]),
+          cost: pickNumber(attrs, ["gen_ai.usage.total_cost"]),
           statusCode: pickNumber(attrs, ["http.status_code"]),
+          prompt: truncate(rawPrompt),
+          completion: truncate(rawCompletion),
         });
       }
     }
