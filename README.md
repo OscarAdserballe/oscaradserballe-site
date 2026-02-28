@@ -18,6 +18,9 @@ npm run build        # build Next.js
 
 ## Vercel Setup
 
+See `VERCEL.md` for the full deployment + env var operations guide.
+See `OPENROUTER_WEBHOOK.md` for the OpenRouter Broadcast webhook architecture and setup.
+
 ```bash
 vercel env ls                                    # list env vars
 vercel env add NEXT_PUBLIC_CONVEX_URL            # add env var (prompts for value)
